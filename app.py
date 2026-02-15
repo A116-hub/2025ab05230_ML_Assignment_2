@@ -39,11 +39,18 @@ if uploaded_file:
     st.subheader("Uploaded Data Preview")
     st.write(data.head())
 
-    X = data.iloc[:, :-1]
-    y_true = data.iloc[:, -1]
+from sklearn.preprocessing import StandardScaler
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+# Separate features and target
+X = data.iloc[:, :-1]
+y_true = data.iloc[:, -1]
+
+# Select only numeric columns
+X = X.select_dtypes(include=["int64", "float64"])
+
+# Scale numeric data
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
 
     model = joblib.load(model_files[model_name])
     y_pred = model.predict(X_scaled)
