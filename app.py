@@ -36,29 +36,31 @@ uploaded_file = st.file_uploader("Upload CSV Test Dataset", type=["csv"])
 
 if uploaded_file:
     data = pd.read_csv(uploaded_file)
+
     st.subheader("Uploaded Data Preview")
     st.write(data.head())
 
-from sklearn.preprocessing import StandardScaler
+    # Separate features and target
+    X = data.iloc[:, :-1]
+    y_true = data.iloc[:, -1]
 
-# Separate features and target
-X = data.iloc[:, :-1]
-y_true = data.iloc[:, -1]
+    # Select only numeric columns
+    X = X.select_dtypes(include=["int64", "float64"])
 
-# Select only numeric columns
-X = X.select_dtypes(include=["int64", "float64"])
+    # Scale features
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
 
-# Scale numeric data
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-
+    # Load model
     model = joblib.load(model_files[model_name])
+
+    # Predictions
     y_pred = model.predict(X_scaled)
 
-    # -------- Evaluation Metrics (1 mark) --------
+    # Evaluation Metrics
     st.subheader("Classification Report")
     st.text(classification_report(y_true, y_pred))
 
-    # -------- Confusion Matrix (1 mark) --------
+    # Confusion Matrix
     st.subheader("Confusion Matrix")
     st.write(confusion_matrix(y_true, y_pred))
