@@ -27,9 +27,29 @@ st.set_page_config(
 
 st.title("ML Assignment 2 – Classification Models")
 st.write(
-    "Upload test data, select a trained model, and view evaluation metrics, "
-    "classification report, and confusion matrix."
+    "Upload test data, select a trained model, "
+    "and view evaluation metrics, classification report, and confusion matrix."
 )
+
+# ==============================
+# DOWNLOAD TEST DATASET
+# ==============================
+st.subheader("📥 Download Test Dataset (For Evaluator)")
+
+try:
+    test_df = pd.read_csv("test_samples.csv")
+    csv_data = test_df.to_csv(index=False).encode("utf-8")
+
+    st.download_button(
+        label="Download test_samples.csv",
+        data=csv_data,
+        file_name="test_samples.csv",
+        mime="text/csv"
+    )
+except FileNotFoundError:
+    st.warning("⚠️ test_samples.csv not found in repository.")
+
+st.divider()
 
 # ==============================
 # MODEL SELECTION
@@ -67,45 +87,34 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
     try:
-        # Load data
         data = pd.read_csv(uploaded_file)
 
         st.subheader("📄 Uploaded Data Preview")
         st.dataframe(data.head())
 
-        # Split features and target
         X = data.iloc[:, :-1]
         y_true = data.iloc[:, -1]
 
-        # Encode categorical features
         for col in X.select_dtypes(include=["object"]).columns:
             le = LabelEncoder()
             X[col] = le.fit_transform(X[col])
 
-        # Encode target if needed
         if y_true.dtype == "object":
             y_le = LabelEncoder()
             y_true = y_le.fit_transform(y_true)
 
-        # Load scaler and model
         scaler = joblib.load(SCALER_PATH)
         X_scaled = scaler.transform(X)
 
         model = joblib.load(model_files[model_name])
-
-        # Predictions
         y_pred = model.predict(X_scaled)
 
-        # Probabilities (for AUC)
         if hasattr(model, "predict_proba"):
             y_prob = model.predict_proba(X_scaled)
             auc = roc_auc_score(y_true, y_prob, multi_class="ovr")
         else:
             auc = np.nan
 
-        # ==============================
-        # EVALUATION METRICS
-        # ==============================
         st.subheader(f"📈 Evaluation Metrics – {model_name}")
 
         accuracy = accuracy_score(y_true, y_pred)
@@ -125,43 +134,22 @@ if uploaded_file is not None:
         col5.metric("F1 Score", f"{f1:.3f}")
         col6.metric("MCC", f"{mcc:.3f}")
 
-        # ==============================
-        # CLASSIFICATION REPORT
-        # ==============================
         st.subheader("📋 Classification Report")
-
-        report = classification_report(
-            y_true,
-            y_pred,
-            output_dict=True
-        )
-
-        report_df = pd.DataFrame(report).transpose()
+        report_df = pd.DataFrame(
+            classification_report(y_true, y_pred, output_dict=True)
+        ).transpose()
         st.dataframe(report_df.style.format("{:.3f}"))
 
-        # ==============================
-        # CONFUSION MATRIX
-        # ==============================
         st.subheader("📊 Confusion Matrix")
-
         cm = confusion_matrix(y_true, y_pred)
 
         fig, ax = plt.subplots(figsize=(5, 4))
-        sns.heatmap(
-            cm,
-            annot=True,
-            fmt="d",
-            cmap="Blues",
-            cbar=False,
-            ax=ax
-        )
-
-        ax.set_xlabel("Predicted Label")
-        ax.set_ylabel("True Label")
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False, ax=ax)
+        ax.set_xlabel("Predicted")
+        ax.set_ylabel("Actual")
         ax.set_title("Confusion Matrix")
-
         st.pyplot(fig)
 
     except Exception as e:
-        st.error("❌ An error occurred while processing the data.")
+        st.error("❌ An error occurred.")
         st.error(str(e))
